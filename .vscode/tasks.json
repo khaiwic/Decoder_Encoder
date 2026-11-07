@@ -1,0 +1,38 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Zephyr: Build encoder",
+      "type": "process",
+      "command": "C:/zephyrproject/.venv312/Scripts/python.exe",
+      "args": [
+        "-m",
+        "west",
+        "-z",
+        "C:/zephyrproject/zephyr",
+        "build",
+        "-b",
+        "esp32s3_devkitc/esp32s3/procpu",
+        "-d",
+        "${workspaceFolder}/firmware/encoder/build",
+        "${workspaceFolder}/firmware/encoder",
+        "--",
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "ZEPHYR_BASE": "C:/zephyrproject/zephyr",
+          "ZEPHYR_SDK_INSTALL_DIR": "C:/zephyr-sdk-1.0.1"
+        }
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [
+        "$gcc"
+      ]
+    }
+  ]
+}

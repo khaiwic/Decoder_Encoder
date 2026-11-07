@@ -1,0 +1,13 @@
+{
+  "[markdown]": {
+    "editor.codeActionsOnSave": {
+      "source.fixAll.markdownlint": "explicit"
+    }
+  },
+  "files.associations": {
+    "*.overlay": "dts",
+    "*.dts": "dts",
+    "*.dtsi": "dts"
+  },
+  "cmake.sourceDirectory": "C:/Users/ADMIN/Documents/Decoder_and_Encoder/firmware/encoder"
+}

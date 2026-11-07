@@ -1,0 +1,36 @@
+#include <zephyr/dt-bindings/i2c/i2c.h>
+#include <zephyr/dt-bindings/pinctrl/esp32s3-pinctrl.h>
+
+/* 1. Cấu hình lại chân Pinmux cho I2C0: SDA = GPIO8, SCL = GPIO9 */
+&pinctrl {
+    i2c0_custom: i2c0_custom {
+        group1 {
+            pinmux = <I2C0_SDA_GPIO8>, <I2C0_SCL_GPIO9>;
+            bias-pull-up;
+            drive-open-drain;
+            output-high;
+        };
+    };
+};
+
+/* 2. Bật I2C0 ở tốc độ 100kHz và khai báo node SHT30 tại địa chỉ 0x44 */
+&i2c0 {
+    status = "okay";
+    clock-frequency = <I2C_BITRATE_STANDARD>;
+    pinctrl-0 = <&i2c0_custom>;
+    pinctrl-names = "default";    /* <-- Sửa thành "default" */
+
+    sht30: sht3xd@44 {
+        compatible = "sensirion,sht3xd";
+        reg = <0x44>;
+        status = "okay";
+    };
+};
+
+/* 3. Bật thêm UART1 (mặc định TX=GPIO17, RX=GPIO18) để truyền frame sang board CHANNEL */
+&uart1 {
+    status = "okay";
+    current-speed = <115200>;
+    pinctrl-0 = <&uart1_default>;
+    pinctrl-names = "default";
+};

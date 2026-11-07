@@ -1,0 +1,22 @@
+{
+  "configurations": [
+    {
+      "name": "Zephyr ESP32-S3",
+      "compilerPath": "C:/zephyr-sdk-1.0.1/gnu/xtensa-espressif_esp32s3_zephyr-elf/bin/xtensa-espressif_esp32s3_zephyr-elf-gcc.exe",
+      "cStandard": "c17",
+      "cppStandard": "c++17",
+      "includePath": [
+        "${workspaceFolder}/firmware/encoder/src",
+        "${workspaceFolder}/firmware/encoder/include/**",
+        "C:/zephyrproject/zephyr/include",
+        "${workspaceFolder}/build/encoder/zephyr/include/generated",
+        "${workspaceFolder}/build/encoder/zephyr/include/generated/zephyr"
+      ],
+      "defines": [
+        "__ZEPHYR__"
+      ],
+      "compileCommands": "${workspaceFolder}/build/encoder/compile_commands.json"
+    }
+  ],
+  "version": 4
+}
