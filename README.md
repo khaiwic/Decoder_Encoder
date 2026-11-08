@@ -1,12 +1,13 @@
 # HỆ THỐNG TRUYỀN THÔNG TIN CƠ BẢN TRÊN 3 ESP32-S3 SỬ DỤNG SHT30
 
 > **Tài liệu:** README dự án và phân công nhiệm vụ (phiên bản 4.0 — SHT30)  
-> **Cập nhật:** 27/10/2026  
+> **Cập nhật:** **/**_/____
 > **Môn học:** Lý thuyết thông tin  
-> **Quy mô:** 03 sinh viên — 03 mô-đun phần cứng  
-> **Hạn đề bài:** Cuối tháng 11/2026; **mốc nội bộ đề xuất:** hoàn thành bản demo ổn định trước 28/11/2026  
+> **Thành viên:** 03 sinh viên
 > **Phần cứng:** 03 ESP32-S3, 01 cảm biến nhiệt độ/độ ẩm SHT30, cáp UART, máy tính để quan sát/log  
-> **Mục tiêu:** Đáp ứng đề bài và xây dựng bộ thực nghiệm đủ sức thuyết phục để **được xem xét** đạt tối đa 30% điểm quá trình. Việc đạt điểm tối đa do giảng viên quyết định.
+> **Mục tiêu:**   (1) Thực hiện tìm hiểu, khảo sát.
+> (2) Tham khảo hoặc tự thiết kế, sử dụng các mô-đun ESP32, STM32 hoặc các mô-đun tương đương khác.
+> (3) Phân tích và thực hiện hệ thống với tối thiểu gồm 3 khối: Máy phát - Kênh - Máy thu với các thao tác:
 
 ## 1. Mục tiêu và giới hạn dự án
 
@@ -72,8 +73,8 @@ Cần trình diễn **ít nhất ba cấu hình** để chứng minh tác dụng
 | --- | --- | --- |
 | VCC / VIN | 3V3 | Cấp 3,3 V để tương thích mức logic ESP32-S3; kiểm tra đúng module đang dùng |
 | GND | GND | Nối mass chung |
-| SDA | GPIO8 (*đề xuất*) | Dữ liệu I²C; kiểm tra pin board và pull-up |
-| SCL | GPIO9 (*đề xuất*) | Clock I²C; kiểm tra pin board và pull-up |
+| SDA | GPIO8 (_đề xuất_) | Dữ liệu I²C; kiểm tra pin board và pull-up |
+| SCL | GPIO9 (_đề xuất_) | Clock I²C; kiểm tra pin board và pull-up |
 
 - Địa chỉ I²C 7-bit mặc định **`0x44`**, hoặc **`0x45`** khi chân ADDR được kéo lên mức cao. Một số breakout đã đặt ADDR cố định: cần quét I²C để xác minh.
 - Nên bắt đầu I²C **100 kHz**; kiểm tra điện trở pull-up của module, tránh kéo SDA/SCL lên 5 V khi nối trực tiếp ESP32-S3.

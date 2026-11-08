@@ -9,5 +9,10 @@
     "*.dts": "dts",
     "*.dtsi": "dts"
   },
-  "cmake.sourceDirectory": "C:/Users/ADMIN/Documents/Decoder_and_Encoder/firmware/encoder"
+  "cmake.sourceDirectory": "C:/Users/ADMIN/Documents/Decoder_and_Encoder/firmware/encoder",
+  "clangd.arguments": [
+    "--compile-commands-dir=${workspaceFolder}/build/encoder",
+    "--query-driver=C:/zephyr-sdk-1.0.1/**",
+    "--header-insertion=never"
+  ]
 }

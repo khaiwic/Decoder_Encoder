@@ -1,13 +1,15 @@
 #include "sht30_driver.h"
-
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/i2c.h>
 
+//Marco cấu hình i2c đã setup tại app.overlay
 static const struct i2c_dt_spec sht30_i2c = I2C_DT_SPEC_GET(DT_NODELABEL(sht30));
 
+//g_stats: Biến toàn cục lưu lại số lần đọc thành công, số lần lỗi I²C, lỗi CRC.
 static sht30_stats_t g_stats = {0};
 
+//Kiem tra ma CRC-8
 static uint8_t sht30_compute_crc8(const uint8_t *data, size_t len)
 {
     uint8_t crc = 0xFFU;
@@ -53,7 +55,7 @@ sht30_status_t sht30_read_sample(sht30_sample_t *sample)
         return SHT30_ERR_NOT_READY;
     }
     g_stats.total_reads++;
-    /* 1. Gửi lệnh đo Single-Shot 0x2400 (High Repeatability, No Clock Stretching) */
+    /* 1. Gửi lệnh đo Single-SShot- 0x2400*/
     uint8_t cmd[2] = {
         (uint8_t)(SHT30_CMD_MEAS_HIGH_NO_CS >> 8),
         (uint8_t)(SHT30_CMD_MEAS_HIGH_NO_CS & 0xFFU)
@@ -63,16 +65,14 @@ sht30_status_t sht30_read_sample(sht30_sample_t *sample)
         g_stats.i2c_errors++;
         return SHT30_ERR_I2C;
     }
-    /* 2. Đợi SHT30 hoàn tất phép đo (~15.5ms tối đa -> đợi 20ms) */
     k_msleep(SHT30_MEAS_DELAY_MS);
-    /* 3. Đọc 6 byte kết quả: [T_MSB, T_LSB, CRC_T, RH_MSB, RH_LSB, CRC_RH] */
+    //Buffer luu ru lieu tra ve
     uint8_t rx_buf[SHT30_RAW_READ_SIZE] = {0};
     ret = i2c_read_dt(&sht30_i2c, rx_buf, sizeof(rx_buf));
     if (ret != 0) {
         g_stats.i2c_errors++;
         return SHT30_ERR_I2C;
     }
-    /* 4. Kiểm tra độc lập 2 mã CRC-8 cho Nhiệt độ và Độ ẩm */
     uint8_t crc_t_calc  = sht30_compute_crc8(&rx_buf[0], 2U);
     uint8_t crc_rh_calc = sht30_compute_crc8(&rx_buf[3], 2U);
     if ((crc_t_calc != rx_buf[2]) || (crc_rh_calc != rx_buf[5])) {

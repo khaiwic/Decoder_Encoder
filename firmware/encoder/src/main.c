@@ -8,10 +8,17 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "sht30_driver.h"
+#include "hamming74_encoder.h"
+#include "huffman_encoder.h"
+
 #define COMMAND_SIZE 128
 
 int main(void)
 {
+    //Khoi dong ham 
+    sht30_init();
+
     while (1) {
         k_sleep(K_FOREVER);
     }

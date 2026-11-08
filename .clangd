@@ -1,0 +1,14 @@
+CompileFlags:
+  CompilationDatabase: build/encoder
+  Compiler: C:/zephyr-sdk-1.0.1/gnu/xtensa-espressif_esp32s3_zephyr-elf/bin/xtensa-espressif_esp32s3_zephyr-elf-gcc.exe
+  Add:
+    - --sysroot=C:/zephyr-sdk-1.0.1/gnu/xtensa-espressif_esp32s3_zephyr-elf/xtensa-espressif_esp32s3_zephyr-elf
+    - -isystem
+    - C:/zephyr-sdk-1.0.1/gnu/xtensa-espressif_esp32s3_zephyr-elf/xtensa-espressif_esp32s3_zephyr-elf/include
+  Remove:
+    - -mlongcalls
+    - -fstrict-volatile-bitfields
+    - -specs=*
+    - --param=*
+    - -fmacro-prefix-map=*
+
