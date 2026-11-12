@@ -25,7 +25,7 @@ rule C_COMPILER__app_unscanned_
 # Rule for linking C static library.
 
 rule C_STATIC_LIBRARY_LINKER__app_
-  command = C:\WINDOWS\system32\cmd.exe /C "$PRE_LINK && C:\ST\STM32CubeCLT_1.22.0\CMake\bin\cmake.exe -E rm -f $TARGET_FILE && C:\zephyr-sdk-1.0.1\gnu\xtensa-espressif_esp32s3_zephyr-elf\bin\xtensa-espressif_esp32s3_zephyr-elf-ar.exe qc $TARGET_FILE $LINK_FLAGS $in && C:\zephyr-sdk-1.0.1\gnu\xtensa-espressif_esp32s3_zephyr-elf\bin\xtensa-espressif_esp32s3_zephyr-elf-ranlib.exe $TARGET_FILE && $POST_BUILD"
+  command = C:\WINDOWS\system32\cmd.exe /C "$PRE_LINK && C:\ST\STM32CubeCLT_1.22.0\CMake\bin\cmake.exe -E rm -f $TARGET_FILE && C:\zephyr-sdk-1.0.1\gnu\xtensa-espressif_esp32s3_zephyr-elf\bin\xtensa-espressif_esp32s3_zephyr-elf-ar.exe qcs $TARGET_FILE $LINK_FLAGS $in && C:\ST\STM32CubeCLT_1.22.0\CMake\bin\cmake.exe -E true && $POST_BUILD"
   description = Linking C static library $TARGET_FILE
   restat = $RESTAT
 
