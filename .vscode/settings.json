@@ -9,6 +9,12 @@
     "*.dts": "dts",
     "*.dtsi": "dts"
   },
+  "files.watcherExclude": {
+    "**/build/**": true
+  },
+  "search.exclude": {
+    "**/build/**": true
+  },
   "cmake.sourceDirectory": "C:/Users/ADMIN/Documents/Decoder_and_Encoder/firmware/encoder",
   "clangd.arguments": [
     "--compile-commands-dir=${workspaceFolder}/build/encoder",

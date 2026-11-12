@@ -33,8 +33,7 @@ static void heap_push(min_heap_t *heap, int16_t node_idx) {
   size_t i = heap->size++;
   while (i > 0) {
     size_t parent = (i - 1) / 2;
-    if (s_tree_nodes[heap->data[parent]].weight <=
-        s_tree_nodes[node_idx].weight) {
+    if (s_tree_nodes[heap->data[parent]].weight <= s_tree_nodes[node_idx].weight) {
       break;
     }
     heap->data[i] = heap->data[parent];
@@ -59,13 +58,11 @@ static int16_t heap_pop(min_heap_t *heap) {
       size_t right = left + 1;
       size_t smallest = left;
 
-      if (right < heap->size && s_tree_nodes[heap->data[right]].weight <
-                                    s_tree_nodes[heap->data[left]].weight) {
+      if (right < heap->size && s_tree_nodes[heap->data[right]].weight < s_tree_nodes[heap->data[left]].weight) {
         smallest = right;
       }
 
-      if (s_tree_nodes[last].weight <=
-          s_tree_nodes[heap->data[smallest]].weight) {
+      if (s_tree_nodes[last].weight <= s_tree_nodes[heap->data[smallest]].weight) {
         break;
       }
 
@@ -79,8 +76,7 @@ static int16_t heap_pop(min_heap_t *heap) {
 }
 
 /* Duyệt cây đệ quy tính độ dài từ mã của từng ký hiệu lá */
-static void compute_tree_depths(int16_t node_idx, uint8_t depth,
-                                uint8_t lengths[HUFFMAN_MAX_SYMBOLS]) {
+static void compute_tree_depths(int16_t node_idx, uint8_t depth, uint8_t lengths[HUFFMAN_MAX_SYMBOLS]) {
   if (node_idx < 0) {
     return;
   }
@@ -91,10 +87,8 @@ static void compute_tree_depths(int16_t node_idx, uint8_t depth,
     return;
   }
 
-  compute_tree_depths(s_tree_nodes[node_idx].left, (uint8_t)(depth + 1),
-                      lengths);
-  compute_tree_depths(s_tree_nodes[node_idx].right, (uint8_t)(depth + 1),
-                      lengths);
+  compute_tree_depths(s_tree_nodes[node_idx].left, (uint8_t)(depth + 1), lengths);
+  compute_tree_depths(s_tree_nodes[node_idx].right, (uint8_t)(depth + 1), lengths);
 }
 
 /* Hàm so sánh dùng qsort sắp xếp theo chuẩn Canonical Huffman:
@@ -111,10 +105,7 @@ static int compare_canonical_entries(const void *a, const void *b) {
   return (int)ea->symbol - (int)eb->symbol;
 }
 
-huffman_status_t huffman_encode(const uint8_t *in_data, size_t in_len,
-                                uint8_t *out_bitstream, size_t max_out_len,
-                                huffman_codebook_t *out_book,
-                                huffman_metrics_t *metrics) {
+huffman_status_t huffman_encode(const uint8_t *in_data, size_t in_len, uint8_t *out_bitstream, size_t max_out_len, huffman_codebook_t *out_book, huffman_metrics_t *metrics) {
   if (in_data == NULL || out_bitstream == NULL || out_book == NULL) {
     return HUFFMAN_ERR_PARAM;
   }
@@ -170,8 +161,7 @@ huffman_status_t huffman_encode(const uint8_t *in_data, size_t in_len,
       int16_t right = heap_pop(&heap);
 
       int16_t parent = (int16_t)s_nodes_count++;
-      s_tree_nodes[parent].weight =
-          s_tree_nodes[left].weight + s_tree_nodes[right].weight;
+      s_tree_nodes[parent].weight = s_tree_nodes[left].weight + s_tree_nodes[right].weight;
       s_tree_nodes[parent].left = left;
       s_tree_nodes[parent].right = right;
       s_tree_nodes[parent].symbol = 0;
@@ -198,8 +188,7 @@ huffman_status_t huffman_encode(const uint8_t *in_data, size_t in_len,
   }
 
   /* Sắp xếp danh sách theo chuẩn Canonical Huffman */
-  qsort(out_book->entries, used_symbols, sizeof(huffman_book_entry_t),
-        compare_canonical_entries);
+  qsort(out_book->entries, used_symbols, sizeof(huffman_book_entry_t), compare_canonical_entries);
 
   /* 5. Gán mã nhị phân chuẩn Canonical Huffman */
   uint32_t canonical_codes[HUFFMAN_MAX_SYMBOLS] = {0};
@@ -253,16 +242,14 @@ huffman_status_t huffman_encode(const uint8_t *in_data, size_t in_len,
     metrics->avg_code_len = (float)bit_pos / (float)in_len;
     metrics->payload_comp_ratio = ((float)in_len * 8.0f) / (float)bit_pos;
 
-    size_t total_frame_payload =
-        metrics->coded_bytes_count + metrics->codebook_bytes_size;
+    size_t total_frame_payload = metrics->coded_bytes_count + metrics->codebook_bytes_size;
     metrics->net_comp_ratio = (float)in_len / (float)total_frame_payload;
   }
 
   return HUFFMAN_OK;
 }
 
-int huffman_serialize_codebook(const huffman_codebook_t *book, uint8_t *out_buf,
-                               size_t max_len) {
+int huffman_serialize_codebook(const huffman_codebook_t *book, uint8_t *out_buf, size_t max_len) {
   if (book == NULL || out_buf == NULL) {
     return HUFFMAN_ERR_PARAM;
   }
@@ -272,11 +259,8 @@ int huffman_serialize_codebook(const huffman_codebook_t *book, uint8_t *out_buf,
     return HUFFMAN_ERR_BUF_OVERFLOW;
   }
 
-  /* 2 byte đầu ghi used_symbols_count (Big-Endian) */
   out_buf[0] = (uint8_t)(book->used_symbols_count >> 8U);
   out_buf[1] = (uint8_t)(book->used_symbols_count & 0xFFU);
-
-  /* Tiếp theo là mảng các cặp (symbol, len) */
   for (uint16_t i = 0; i < book->used_symbols_count; i++) {
     out_buf[2U + (i * 2U)] = book->entries[i].symbol;
     out_buf[2U + (i * 2U) + 1U] = book->entries[i].len;

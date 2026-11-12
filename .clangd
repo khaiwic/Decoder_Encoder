@@ -2,13 +2,23 @@ CompileFlags:
   CompilationDatabase: build/encoder
   Compiler: C:/zephyr-sdk-1.0.1/gnu/xtensa-espressif_esp32s3_zephyr-elf/bin/xtensa-espressif_esp32s3_zephyr-elf-gcc.exe
   Add:
+    - -D__XTENSA__=1
+    - -D__xtensa__=1
+    - -D__XTENSA_EL__=1
+    - -D__XTENSA_WINDOWED_ABI__=1
     - --sysroot=C:/zephyr-sdk-1.0.1/gnu/xtensa-espressif_esp32s3_zephyr-elf/xtensa-espressif_esp32s3_zephyr-elf
     - -isystem
     - C:/zephyr-sdk-1.0.1/gnu/xtensa-espressif_esp32s3_zephyr-elf/xtensa-espressif_esp32s3_zephyr-elf/include
+    - -IC:/Users/ADMIN/Documents/Decoder_and_Encoder/firmware/encoder/src
+    - -IC:/Users/ADMIN/Documents/Decoder_and_Encoder/firmware/encoder/include
+    - -IC:/Users/ADMIN/Documents/Decoder_and_Encoder/firmware/encoder/include/hamming74_encoder
+    - -IC:/Users/ADMIN/Documents/Decoder_and_Encoder/firmware/encoder/include/huffman_encoder
+    - -IC:/Users/ADMIN/Documents/Decoder_and_Encoder/firmware/encoder/include/logger
+    - -IC:/Users/ADMIN/Documents/Decoder_and_Encoder/firmware/encoder/include/sht30_driver
+    - -IC:/Users/ADMIN/Documents/Decoder_and_Encoder/firmware/encoder/include/control_pannel
   Remove:
     - -mlongcalls
     - -fstrict-volatile-bitfields
     - -specs=*
     - --param=*
     - -fmacro-prefix-map=*
-

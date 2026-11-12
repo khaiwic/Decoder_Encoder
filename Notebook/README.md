@@ -1,13 +1,12 @@
 # HỆ THỐNG TRUYỀN THÔNG TIN CƠ BẢN TRÊN 3 ESP32-S3 SỬ DỤNG SHT30
 
-> **Tài liệu:** README dự án và phân công nhiệm vụ (phiên bản 4.0 — SHT30)  
-> **Cập nhật:** **/**_/____
-> **Môn học:** Lý thuyết thông tin  
-> **Thành viên:** 03 sinh viên
-> **Phần cứng:** 03 ESP32-S3, 01 cảm biến nhiệt độ/độ ẩm SHT30, cáp UART, máy tính để quan sát/log  
+> **Tài liệu:** README dự án và phân công nhiệm vụ (phiên bản 4.0 — SHT30).  
+> **Môn học:** Lý thuyết thông tin  .
+> **Thành viên:** 03 sinh viên.
+> **Phần cứng:** 03 ESP32-S3, 01 cảm biến nhiệt độ/độ ẩm SHT30, cáp UART, máy tính để quan sát/log  .
 > **Mục tiêu:**   (1) Thực hiện tìm hiểu, khảo sát.
 > (2) Tham khảo hoặc tự thiết kế, sử dụng các mô-đun ESP32, STM32 hoặc các mô-đun tương đương khác.
-> (3) Phân tích và thực hiện hệ thống với tối thiểu gồm 3 khối: Máy phát - Kênh - Máy thu với các thao tác:
+> (3) Phân tích và thực hiện hệ thống với tối thiểu gồm 3 khối: Máy phát - Kênh - Máy thu với các thao tác.
 
 ## 1. Mục tiêu và giới hạn dự án
 
@@ -26,8 +25,6 @@ Cần trình diễn **ít nhất ba cấu hình** để chứng minh tác dụng
 | **A — RAW** | Không | Không | Đường cơ sở không nén/không bảo vệ |
 | **B — HUFFMAN** | Huffman | Không | Hiệu quả và chi phí của nén nguồn |
 | **C — HUFFMAN + HAMMING** | Huffman | Hamming(7,4) | Khả năng sửa lỗi và overhead bảo vệ dữ liệu |
-
-**Không làm trong phạm vi bắt buộc:** camera, OpenCV, truyền ảnh, AI, ROS/micro-ROS, Wi-Fi, FPGA, giao diện đồ họa phức tạp. **RAW + Hamming** là thí nghiệm bổ sung nếu còn thời gian.
 
 ### 1.2. Tiêu chí học thuật
 

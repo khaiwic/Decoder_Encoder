@@ -13,7 +13,8 @@
         "${workspaceFolder}/build/encoder/zephyr/include/generated/zephyr"
       ],
       "defines": [
-        "__ZEPHYR__"
+        "__ZEPHYR__",
+        "__XTENSA__"
       ],
       "compileCommands": "${workspaceFolder}/build/encoder/compile_commands.json"
     }
