@@ -20,5 +20,77 @@
     "--compile-commands-dir=${workspaceFolder}/build/encoder",
     "--query-driver=C:/zephyr-sdk-1.0.1/**",
     "--header-insertion=never"
+  ],
+  "latex-workshop.latex.outDir": "%WORKSPACE_FOLDER%/Documents/Report/results",
+  "latex-workshop.latex.recipe.default": "first",
+  "latex-workshop.latex.tools": [
+    {
+      "name": "pdflatex",
+      "command": "pdflatex",
+      "args": [
+        "-interaction=nonstopmode",
+        "-file-line-error",
+        "-output-directory=%OUTDIR%",
+        "%DOC_EXT%"
+      ]
+    },
+    {
+      "name": "bibtex",
+      "command": "bibtex",
+      "args": [
+        "%DOCFILE%"
+      ],
+      "env": {
+        "BIBINPUTS": "%DIR%;",
+        "BSTINPUTS": "%DIR%;"
+      }
+    }
+  ],
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "pdflatex (2x)",
+      "tools": [
+        "pdflatex",
+        "pdflatex"
+      ]
+    },
+    {
+      "name": "pdflatex -> bibtex -> pdflatex (2x)",
+      "tools": [
+        "pdflatex",
+        "bibtex",
+        "pdflatex",
+        "pdflatex"
+      ]
+    }
+  ],
+  "latex-workshop.latex.clean.method": "glob",
+  "latex-workshop.latex.autoClean.run": "onBuilt",
+  "latex-workshop.latex.clean.fileTypes": [
+    "*.aux",
+    "*.bbl",
+    "*.blg",
+    "*.idx",
+    "*.ind",
+    "*.lof",
+    "*.lot",
+    "*.out",
+    "*.toc",
+    "*.acn",
+    "*.acr",
+    "*.alg",
+    "*.glg",
+    "*.glo",
+    "*.gls",
+    "*.fls",
+    "*.log",
+    "*.fdb_latexmk",
+    "*.snm",
+    "*.synctex(busy)",
+    "*.synctex.gz",
+    "*.synctex.gz(busy)",
+    "*.nav",
+    "*.vrb",
+    "*.xdv"
   ]
 }

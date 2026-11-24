@@ -37,6 +37,7 @@ typedef struct {
   size_t codebook_bytes_size;
   float entropy;
   float avg_code_len;
+  float coding_efficiency;
   float payload_comp_ratio;
   float net_comp_ratio;
 } huffman_metrics_t;

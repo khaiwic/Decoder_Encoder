@@ -10,7 +10,6 @@
 #define CMD_BUF_SIZE 64U
 static const struct device *s_uart_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
 
-/* Hàm phụ trợ nội bộ: cắt khoảng trắng đầu/cuối và chuyển thành chữ IN HOA */
 static void normalize_cmd(char *str) {
   char *start = str;
   while (*start && isspace((unsigned char)*start)) {
@@ -31,23 +30,27 @@ static void normalize_cmd(char *str) {
   }
 }
 
-/* Hàm phụ trợ nội bộ: ánh xạ chuỗi sang enum control_panel_t */
-static control_panel_t parse_command_string(const char *cmd) {
-  if (strcmp(cmd, "IDLE") == 0) {
-    return IDLE;
-  } else if (strcmp(cmd, "COLLECT") == 0) {
-    return COLLECT;
-  } else if (strcmp(cmd, "ENCODER_A") == 0) {
-    return ENCODER_A;
-  } else if (strcmp(cmd, "ENCODER_B") == 0) {
-    return ENCODER_B;
-    //   } else if (strcmp(cmd, "ENCODER_C") == 0) {
-    //     return ENCODER_C;
-    //   } else if (strcmp(cmd, "TRANSMIT_UART") == 0 || strcmp(cmd, "TRANS_UART") == 0) {
-    //     return TRANSMIT_UART;
-  } else {
+static control_panel_t parse_command_string(const char *cmd, cp_menu_stage_t stage) {
+  if (stage == CP_MENU_IDLE) {
+    if (strcmp(cmd, "COLLECT") == 0) {
+      return COLLECT;
+    }
+    if (strcmp(cmd, "ENCODER") == 0) {
+      return ENCODER;
+    }
+    if (strcmp(cmd, "IDLE") == 0) {
+      return IDLE;
+    }
     return ERROR;
   }
+
+  if (strcmp(cmd, "IDLE") == 0) {
+    return IDLE;
+  }
+  if (strcmp(cmd, "TRANSMIT_UART") == 0) {
+    return TRANSMIT_UART;
+  }
+  return ERROR;
 }
 
 control_pannel_status control_pannel_init(void) {
@@ -63,20 +66,21 @@ control_pannel_status control_pannel_init(void) {
   return CP_TRUE;
 }
 
-void control_pannel_print_menu(void) {
+void control_pannel_print_menu(cp_menu_stage_t stage) {
   printk("\n+--------------------------------------------------------------+\n");
   printk("|                 CONTROL PANEL - DANH SACH LENH               |\n");
   printk("+--------------------------------------------------------------+\n");
-  printk("|  IDLE          : Dua he thong ve trang thai nghi             |\n");
-  printk("|  COLLECT       : Thu thap 128 mau tu cam bien SHT30          |\n");
-  printk("|  ENCODER_A     : Ma hoa Che do A (RAW - Khong nen)           |\n");
-  printk("|  ENCODER_B     : Ma hoa Che do B (Canonical Huffman)         |\n");
-  // printk("|  ENCODER_C     : Ma hoa Che do C (Huffman + Hamming 7,4)     |\n");
-  // printk("|  TRANSMIT_UART : Gui goi tin qua UART sang Board 2           |\n");
+  if (stage == CP_MENU_IDLE) {
+    printk("|  COLLECT       : Thu thap 128 mau moi tu SHT30               |\n");
+    printk("|  ENCODER       : Ma hoa Huffman + Hamming 7,4 (LTTT06)       |\n");
+  } else {
+    printk("|  IDLE          : Quay lai trang thai cho                     |\n");
+    printk("|  TRANSMIT_UART : Gui goi tin qua UART sang Board 2           |\n");
+  }
   printk("+--------------------------------------------------------------+\n");
 }
 
-control_panel_t read_serial_line(char *out_raw_cmd, size_t max_len) {
+control_panel_t read_serial_line(cp_menu_stage_t stage, char *out_raw_cmd, size_t max_len) {
   char buf[CMD_BUF_SIZE];
   size_t idx = 0;
   uint8_t c;
@@ -95,7 +99,7 @@ control_panel_t read_serial_line(char *out_raw_cmd, size_t max_len) {
             out_raw_cmd[max_len - 1U] = '\0';
           }
 
-          return parse_command_string(buf);
+          return parse_command_string(buf, stage);
         }
       } else if (c == 0x08 || c == 0x7F) {
         if (idx > 0U) {

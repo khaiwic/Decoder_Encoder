@@ -16,9 +16,13 @@ CompileFlags:
     - -IC:/Users/ADMIN/Documents/Decoder_and_Encoder/firmware/encoder/include/logger
     - -IC:/Users/ADMIN/Documents/Decoder_and_Encoder/firmware/encoder/include/sht30_driver
     - -IC:/Users/ADMIN/Documents/Decoder_and_Encoder/firmware/encoder/include/control_pannel
+    - -IC:/Users/ADMIN/Documents/Decoder_and_Encoder/firmware/encoder/include/Tx
   Remove:
     - -mlongcalls
     - -fstrict-volatile-bitfields
     - -specs=*
     - --param=*
     - -fmacro-prefix-map=*
+
+Diagnostics:
+  UnusedIncludes: None

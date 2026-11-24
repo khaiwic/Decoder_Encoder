@@ -15,18 +15,21 @@ set(CMAKE_ASM_ARCHIVE_FINISH "<CMAKE_COMMAND> -E true")
 target_include_directories(app PRIVATE 
     src
     include
-    # include/hamming74_encoder
+    include/hamming74_encoder
     include/huffman_encoder
     include/logger
     include/sht30_driver
     include/control_pannel
+    include/Tx
     )
 
 target_sources(app PRIVATE
     src/main.c
-    # include/hamming74_encoder/hamming74_encoder.c
+    src/factory.c
+    include/hamming74_encoder/hamming74_encoder.c
     include/huffman_encoder/huffman_encoder.c
     include/logger/logger.c
     include/sht30_driver/sht30_driver.c
     include/control_pannel/control_pannel.c
+    include/Tx/tx.c
     )

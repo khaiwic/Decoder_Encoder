@@ -1,0 +1,239 @@
+\documentclass[10pt,landscape,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+\usepackage[top=0.7cm,bottom=0.7cm,left=0.7cm,right=0.7cm]{geometry}
+\usepackage{multicol}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{booktabs,array}
+\usepackage{microtype}
+
+\setlength{\columnsep}{0.6cm}
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+
+% Định nghĩa màu sắc hiện đại
+\definecolor{primary}{RGB}{24, 43, 73}      % Xanh đen đậm
+\definecolor{accent}{RGB}{204, 0, 0}        % Đỏ PTIT
+\definecolor{boxbg}{RGB}{245, 247, 250}     % Xám xanh nhạt
+\definecolor{headerbg}{RGB}{230, 236, 245}  % Header
+\definecolor{highlight}{RGB}{220, 53, 69}
+
+% Tùy biến hộp tcolorbox
+\newtcolorbox{cheatbox}[1]{
+    enhanced,
+    colback=boxbg,
+    colframe=primary,
+    coltitle=white,
+    fonttitle=\bfseries\small,
+    title={#1},
+    arc=2mm,
+    boxrule=0.8pt,
+    left=1.5mm, right=1.5mm, top=1.5mm, bottom=1.5mm,
+    toptitle=1mm, bottomtitle=1mm,
+    before skip=2mm, after skip=2mm
+}
+
+\newtcolorbox{subbox}[1]{
+    colback=white,
+    colframe=accent!80!black,
+    fonttitle=\bfseries\footnotesize,
+    title={#1},
+    arc=1mm,
+    boxrule=0.5pt,
+    left=1mm, right=1mm, top=1mm, bottom=1mm,
+    toptitle=0.5mm, bottomtitle=0.5mm,
+    before skip=1mm, after skip=1mm
+}
+
+\begin{document}
+
+\begin{center}
+    {\Large\textbf{\color{accent}CHEATSHEET LÝ THUYẾT THÔNG TIN: DUNG LƯỢNG KÊNH (CHANNEL CAPACITY)}}\\[2pt]
+    {\footnotesize\textbf{Biên soạn theo Slide PTIT LTTT04ChanVer2022a (ThS. Phạm Văn Sự) | Dùng cho Overleaf / LaTeX}}
+\end{center}
+\vspace{-4pt}
+\hrule height 1pt
+\vspace{4pt}
+
+\begin{multicols*}{3}
+
+% ==================== BOX 1: NGUỒN RỜI RẠC ====================
+\begin{cheatbox}{1. Nguồn rời rạc: Tốc độ phát \& Độ dư thừa}
+\begin{itemize}[leftmargin=*,noitemsep]
+    \item \textbf{Tốc độ phát của nguồn:}
+    \[ v_n = \frac{1}{T_n} \quad [\text{baud hoặc xung/s}] \]
+    ($T_n$: độ rộng trung bình của mỗi xung/dấu tin phát).
+    \item \textbf{Khả năng phát của nguồn (Tốc độ tạo tin):}
+    \[ H'(X) = v_n H(X) = \frac{H(X)}{T_n} \quad [\text{bit/s}] \]
+    \item \textbf{Khả năng phát cực đại:}
+    \[ H'(X)_{\max} = v_n \log_2 N = \frac{\log_2 N}{T_n} \quad (p(x_k) = 1/N) \]
+    \item \textbf{Tỷ số nén tin \& Độ dư thừa nguồn:}
+    \[ \mu = \frac{H(X)}{H(X)_{\max}} \implies D = 1 - \mu = \frac{H'(X)_{\max} - H'(X)}{H'(X)_{\max}} \]
+    \item \textbf{Ý nghĩa $D$:} $D$ lớn $\implies$ hiệu suất truyền tin thấp, nhưng khả năng chống nhiễu cao.
+\end{itemize}
+\end{cheatbox}
+
+% ==================== BOX 2: KÊNH RỜI RẠC ====================
+\begin{cheatbox}{2. Kênh rời rạc \& Phân loại}
+\begin{itemize}[leftmargin=*,noitemsep]
+    \item \textbf{3 tham số đặc trưng:}
+    \begin{enumerate}[leftmargin=*,noitemsep]
+        \item Trường tin vào $X = \{x_1,\dots,x_N\}$, ra $Y = \{y_1,\dots,y_M\}$.
+        \item Ma trận xác suất chuyển $P = [p(y_l|x_k)]_{N \times M}$.
+        \item Tốc độ truyền của kênh: $v_k = \frac{1}{T_k}$ [dấu/s].
+    \end{enumerate}
+    \item \textbf{Kênh đồng nhất:} $p(y_l|x_k)$ không đổi theo thời gian $t$.
+    \item \textbf{Kênh không nhớ (DMC):} $p(y_l|x_k,\dots) = p(y_l|x_k)$
+    \[ p(y_1,\dots,y_n|x_1,\dots,x_n) = \prod_{k=1}^n p(y_k|x_k) \]
+    \item \textbf{Tốc độ truyền tin qua kênh theo thời gian:}
+    \[ I'(X; Y) = v_k I(X; Y) = \frac{I(X; Y)}{T_k} \quad [\text{bit/s}] \]
+    \item \textbf{Phân loại theo tốc độ phát $T_n$ và truyền $T_k$:}
+    \begin{itemize}[leftmargin=*,noitemsep]
+        \item $T_k > T_n$: Kênh \textbf{giãn tin} (kênh chậm hơn nguồn).
+        \item $T_k = T_n$: Kênh \textbf{thông thường}.
+        \item $T_k < T_n$: Kênh \textbf{nén tin} (kênh nhanh hơn nguồn).
+    \end{itemize}
+\end{itemize}
+\end{cheatbox}
+
+% ==================== BOX 3: DUNG LƯỢNG KÊNH RỜI RẠC ====================
+\begin{cheatbox}{3. Dung lượng kênh rời rạc ($C$ và $C'$)}
+\begin{itemize}[leftmargin=*,noitemsep]
+    \item \textbf{Dung lượng mỗi lần truyền (theo ký hiệu):}
+    \[ C = \max_{p(X)} I(X; Y) \quad [\text{bit/lần truyền (bit/dấu)}] \]
+    \item \textbf{Dung lượng theo thời gian (Khả năng thông qua):}
+    \begin{align*}
+        C' &= \max_{p(X)} I'(X;Y) = v_k \max_{p(X)} I(X; Y) \\
+           &= v_k C = \frac{C}{T_k} \quad [\text{bps}]
+    \end{align*}
+    \item \textbf{Tính chất cơ bản:}
+    \begin{itemize}[leftmargin=*,noitemsep]
+        \item $C' \ge 0$. $C' = 0 \iff X, Y$ độc lập (kênh bị đứt).
+        \item $C' \le v_k \log_2 N$ và $C' \le v_k \log_2 M$.
+    \end{itemize}
+    \item \textbf{Công thức tính $I(X; Y)$:}
+    \begin{align*}
+        I(X; Y) &= H(X) - H(X|Y) = H(Y) - H(Y|X) \\
+                &= H(X) + H(Y) - H(X, Y)
+    \end{align*}
+    Trong đó: $H(Y|X) = \sum_{k=1}^N p(x_k) H(Y|x_k)$.
+\end{itemize}
+\end{cheatbox}
+
+% ==================== BOX 4: CÁC LOẠI KÊNH KINH ĐIỂN ====================
+\begin{cheatbox}{4. Công thức tính $C$ các kênh đặc biệt}
+\begin{subbox}{Kênh đối xứng (Symmetric Channel)}
+Mỗi hàng của $P$ là một hoán vị của cùng tập xác suất. Khi đó $H(Y|x_k) = H_{\text{hàng}} = \text{const}$:
+\[ C = \log_2 M - H(Y|x_k) \]
+Đạt được khi đầu vào có phân bố đều $p(x_k) = 1/N$.
+\end{subbox}
+
+\begin{subbox}{Kênh nhị phân đối xứng (BSC - Binary Symmetric)}
+Ma trận chuyển: $P = \begin{pmatrix} 1-p & p \\ p & 1-p \end{pmatrix}$.
+\begin{itemize}[leftmargin=*,noitemsep]
+    \item $H(Y|X) = H_b(p) = -p\log_2 p - (1-p)\log_2(1-p)$.
+    \item Dung lượng: đạt tại $p(x_1) = p(x_2) = 0.5$:
+    \[ C = 1 - H_b(p) \quad [\text{bit/dấu}] \]
+    \item Cực đại: $C = 1$ khi $p = 0$ (kênh lý tưởng) hoặc $p = 1$ (kênh đảo bit).
+    \item Cực tiểu: $C = 0$ khi $p = 0.5$ (kênh đứt hoàn toàn).
+\end{itemize}
+\end{subbox}
+
+\begin{subbox}{Hai kênh BSC mắc nối tiếp}
+Hai kênh có xác suất lỗi $p_{e1}, p_{e2}$. Kênh tương đương là BSC với xác suất lỗi tổng hợp:
+\[ p_e = p_{e1}(1 - p_{e2}) + p_{e2}(1 - p_{e1}) = p_{e1} + p_{e2} - 2p_{e1}p_{e2} \]
+\[ C_{\text{cascade}} = 1 - H_b(p_e) \]
+\end{subbox}
+
+\begin{subbox}{Kênh xóa nhị phân (BEC - Binary Erasure Channel)}
+Đầu vào $\{0, 1\}$, đầu ra $\{0, e, 1\}$. Xác suất xóa là $\alpha$:
+\[ C = 1 - \alpha \quad [\text{bit/dấu}] \]
+\end{subbox}
+\end{cheatbox}
+
+% ==================== BOX 5: ĐỊNH LÝ SHANNON THỨ 2 ====================
+\begin{cheatbox}{5. Định lý mã hóa thứ 2 của Shannon}
+\textbf{Phát biểu (Kênh có nhiễu):}
+\begin{itemize}[leftmargin=*,noitemsep]
+    \item Nếu tốc độ dữ liệu $R \le C'$ (hoặc khả năng phát của nguồn $H'(X) \le C'$):
+    Tồn tại một phép mã hóa và giải mã sao cho xác suất lỗi từ mã $P_e \to 0$ khi độ dài khối $n \to \infty$.
+    \item Nếu $R > C'$ (hoặc $H'(X) > C'$):
+    Không tồn tại bất kỳ hệ thống mã hóa nào có thể truyền tin với xác suất lỗi nhỏ tùy ý.
+    \item \textbf{Nhận xét quan trọng:} Định lý chỉ chứng minh \textbf{tính tồn tại}, không chỉ ra cách xây dựng mã cụ thể.
+\end{itemize}
+\end{cheatbox}
+
+% ==================== BOX 6: KÊNH AWGN ====================
+\begin{cheatbox}{6. Kênh Gauss nhiễu trắng cộng (AWGN)}
+\begin{itemize}[leftmargin=*,noitemsep]
+    \item \textbf{Mô hình:} $y(t) = \mu x(t) + n(t)$ ($\mu = \text{const}$).
+    \item $n(t) \sim \mathcal{N}(0, \sigma_n^2)$, độc lập với tín hiệu $x(t)$.
+    \item \textbf{Công suất:} $P_y = \mu^2 P_x + P_n$ ($\sigma_y^2 = \mu^2 \sigma_x^2 + \sigma_n^2$).
+    \item \textbf{Quan hệ bao hàm:} $C_{\text{liên tục}} \ge C_{\text{rời rạc chứa liên tục}}$.
+    \item \textbf{Entropy vi phân phân bố chuẩn $\mathcal{N}(0, \sigma^2)$:}
+    \[ h = \frac{1}{2}\log_2(2\pi e \sigma^2) = \frac{1}{2}\log_2(2\pi e P) \]
+    \item \textbf{Lượng tin tương hỗ qua kênh AWGN:}
+    \begin{align*}
+        I(X; Y) &= h(Y) - h(Y|X) = h(Y) - h(N) \\
+                &= \frac{1}{2}\log_2(2\pi e P_y) - \frac{1}{2}\log_2(2\pi e P_n) \\
+                &= \frac{1}{2}\log_2 \left(1 + \frac{\mu^2 P_x}{P_n}\right) = \frac{1}{2}\log_2(1 + \text{SNR})
+    \end{align*}
+    \item \textbf{Dung lượng kênh rời rạc theo thời gian ($v_k = 1/\Delta t$):}
+    \begin{align*}
+        C &= \frac{1}{2}\log_2(1 + \text{SNR}) \quad [\text{bit/mẫu}] \\
+        C' &= \frac{v_k}{2}\log_2(1 + \text{SNR}) \quad [\text{bps}]
+    \end{align*}
+    \item \textbf{Tỷ số SNR:} $\text{SNR} = \frac{S}{N} = \frac{\mu^2 P_x}{P_n}$.
+    Khi $\text{SNR} \to 0 \implies C' \to 0$ (kênh đứt).
+\end{itemize}
+\end{cheatbox}
+
+% ==================== BOX 7: CÔNG THỨC SHANNON-HARTLEY ====================
+\begin{cheatbox}{7. Kênh AWGN băng thông hữu hạn $W$}
+\begin{subbox}{Công thức Shannon-Hartley (Slide 25)}
+Qua bộ lọc thông dải lý tưởng băng thông $W$ [Hz], tần số lấy mẫu Nyquist $v_k = 2W$. Mật độ phổ nhiễu 2 phía $N_0/2$ $\implies P_n = N_0 W$:
+\[ C' = W \log_2 \left(1 + \frac{\mu^2 P_x}{N_0 W}\right) = W \log_2 \left(1 + \frac{S}{N}\right) \quad [\text{bps}] \]
+\end{subbox}
+
+\begin{subbox}{Khảo sát ảnh hưởng của băng tần $W$ (Slide 26)}
+\begin{itemize}[leftmargin=*,noitemsep]
+    \item $W \to 0 \implies C' \to 0$.
+    \item Khi $W \uparrow$ thì $C' \uparrow$, nhưng $P_n = N_0 W \uparrow \implies \text{SNR} \downarrow$.
+    \item \textbf{Giới hạn Shannon khi $W \to \infty$:}
+    \begin{align*}
+        C'_\infty &= \lim_{W \to \infty} W \log_2\left(1 + \frac{P}{N_0 W}\right) \\
+                  &= \frac{P}{N_0}\log_2 e \approx 1.4427 \frac{P}{N_0}
+    \end{align*}
+    (Do áp dụng giới hạn $\lim_{x \to 0} (1+x)^{1/x} = e$).
+    \item \textbf{Ý nghĩa:} Băng thông vô hạn không cho dung lượng vô hạn vì nhiễu tích lũy: $0 \le C' \le C'_\infty < \infty$.
+\end{itemize}
+\end{subbox}
+\end{cheatbox}
+
+% ==================== BOX 8: MẸO THI & CÔNG THỨC CHUYỂN ĐỔI ====================
+\begin{cheatbox}{8. Công thức tính nhanh \& Mẹo làm bài thi}
+\begin{itemize}[leftmargin=*,noitemsep]
+    \item \textbf{Đổi SNR từ dB sang tỉ số tuyến tính:}
+    \[ \text{SNR}_{[\text{dB}]} = 10 \log_{10}\left(\frac{S}{N}\right) \iff \frac{S}{N} = 10^{\frac{\text{SNR}_{[\text{dB}]}}{10}} \]
+    \textit{Ví dụ:} $\text{SNR} = 30\text{ dB} \implies S/N = 10^3 = 1000$.
+    \item \textbf{Tính SNR tối thiểu theo yêu cầu tốc độ $R$:}
+    \begin{align*}
+        C' \ge R &\iff W \log_2(1 + \text{SNR}) \ge R \\
+                 &\iff \text{SNR} \ge 2^{\frac{R}{W}} - 1
+    \end{align*}
+    \item \textbf{Kênh truyền hình / ảnh ($N_p$ pixel/ảnh, $f_a$ ảnh/s, $M$ mức xám):}
+    \[ R = N_p \cdot f_a \cdot \log_2 M \quad [\text{bps}] \]
+    Đặt $C' \ge R \implies W \log_2(1 + S/N) \ge R \implies W \ge \frac{R}{\log_2(1 + S/N)}$.
+    \item \textbf{Ma trận chuyển $P$:} Tổng mỗi hàng luôn bằng 1 ($\sum_l p(y_l|x_k) = 1$).
+    \item \textbf{Xác suất đầu ra:} $p(y_l) = \sum_k p(x_k) p(y_l|x_k)$.
+\end{itemize}
+\end{cheatbox}
+
+\end{multicols*}
+
+\end{document}

@@ -35,7 +35,7 @@ Trong hệ thống truyền tin 3 khối (TX $\rightarrow$ CHANNEL $\rightarrow$
 
 Mã tuyến tính được gọi là **hệ thống (systematic)** nếu các bit dữ liệu gốc xuất hiện nguyên vẹn ở một vị trí cố định trong từ mã. Trong dự án này, ta chọn quy ước chuẩn: **4 bit dữ liệu đi trước, 3 bit kiểm tra đi sau**:
 
-$$c = [d_1, d_2, d_3, d_4, p_1, p_2, p_3]$$
+$$c = [d_1, d_2, d_3, d_4, p_1, p_2, p_3] = [d | p]$$
 
 ### 2.1. Phương trình tính Parity Bits
 Để bảo đảm khoảng cách Hamming $d_{\min} = 3$, mỗi bit kiểm tra bảo vệ một tập hợp con gồm 3 trong 4 bit dữ liệu theo phép cộng Modulo-2 (phép XOR $\oplus$):
@@ -127,62 +127,3 @@ Mỗi từ mã dài **7 bit**, trong khi UART và bộ nhớ vi điều khiển 
 Xếp liên tiếp các khối 7 bit vào mảng byte:
 - 8 từ mã Hamming (mỗi từ 7 bit) = $8 \times 7 = 56$ bit = đúng **7 byte** tròn trịa.
 - Nếu chuỗi bit kết thúc không tròn byte, ta chèn padding bit `0` ở byte cuối và ghi rõ tổng số bit có nghĩa (`coded_valid_bits`) trong Header gói tin.
-
----
-
-## 6. Hướng dẫn Hiện thực trong Module `hamming74_encoder`
-
-### 6.1. File Header: `hamming74_encoder.h`
-Cần cung cấp các hàm cơ bản:
-```c
-#ifndef _HAMMING74_ENCODER_H_
-#define _HAMMING74_ENCODER_H_
-
-#include <stdint.h>
-#include <stddef.h>
-
-/**
- * @brief Mã hóa 1 nhóm 4 bit (nibble) thành 7 bit codeword dạng hệ thống
- * @param nibble 4 bit dữ liệu (0x00 - 0x0F)
- * @return 7 bit codeword (0x00 - 0x7F)
- */
-uint8_t hamming74_encode_nibble(uint8_t nibble);
-
-/**
- * @brief Mã hóa toàn bộ chuỗi bit hoặc byte đầu vào thành luồng bit Hamming(7,4)
- * @param in_data        Mảng dữ liệu đầu vào (sau khi đã nén Huffman)
- * @param in_bits_count  Số bit dữ liệu hợp lệ đầu vào
- * @param out_buf        Bộ đệm chứa dữ liệu đã mã hóa Hamming
- * @param out_bits_count Con trỏ nhận tổng số bit sau khi mã hóa (= in_bits_count * 7 / 4)
- * @return Số byte thực tế được ghi vào out_buf
- */
-size_t hamming74_encode_stream(const uint8_t *in_data, size_t in_bits_count,
-                              uint8_t *out_buf, size_t *out_bits_count);
-
-#endif
-```
-
-### 6.2. File Mã nguồn: `hamming74_encoder.c`
-Sử dụng mảng hằng số `LUT` (Lookup Table) đã tính ở Mục 3:
-```c
-#include "hamming74_encoder.h"
-
-static const uint8_t HAMMING74_LUT[16] = {
-    0x00, 0x0B, 0x16, 0x1D, 0x27, 0x2C, 0x31, 0x3A,
-    0x45, 0x4E, 0x53, 0x58, 0x62, 0x69, 0x74, 0x7F
-};
-
-uint8_t hamming74_encode_nibble(uint8_t nibble) {
-    return HAMMING74_LUT[nibble & 0x0F];
-}
-```
-
----
-
-## 7. Phân tích Giới hạn Học thuật (Dùng cho Báo cáo & Bảo vệ)
-
-1. **Khả năng sửa lỗi đơn:** Với kênh BSC có xác suất lật bit $p$ nhỏ ($p \le 1\%$), đa số lỗi rơi vào trường hợp 1 bit lỗi/codeword $\rightarrow$ Hamming sửa đúng $100\%$, BER đầu cuối giảm mạnh.
-2. **Hiện tượng lan truyền lỗi khi có $\ge 2$ bit lỗi:**
-   Xác suất 1 codeword bị $\ge 2$ bit lỗi là:
-   $$P_{\ge 2} = 1 - (1-p)^7 - 7p(1-p)^6$$
-   Khi rơi vào trường hợp này, Syndrome $S$ sẽ tính ra một vị trí sai khác và Hamming sẽ **sửa nhầm một bit đang đúng thành bit sai**, làm tăng thêm số bit lỗi (miscorrection). Đây là minh chứng thực nghiệm quan trọng cần đưa vào báo cáo môn học.

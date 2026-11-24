@@ -1,0 +1,339 @@
+\documentclass[12pt,a4paper]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+\usepackage[top=2.5cm,bottom=2.5cm,left=3.0cm,right=2.0cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
+\definecolor{primary}{RGB}{24, 43, 73}
+\definecolor{accent}{RGB}{180, 0, 0}
+\definecolor{notebg}{RGB}{246, 248, 251}
+
+\newtcolorbox{notebox}[1]{
+    colback=notebg,
+    colframe=primary!70!black,
+    fonttitle=\bfseries\small,
+    title={#1},
+    boxrule=0.6pt,
+    arc=1.5mm,
+    left=2.5mm, right=2.5mm, top=1.5mm, bottom=1.5mm,
+    before skip=4pt, after skip=6pt
+}
+
+\begin{document}
+
+% --- MỤC LỤC TỰ ĐỘNG ---
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+% ==============================================================================
+% CHƯƠNG 1
+% ==============================================================================
+\chapter{Tổng quan kiến thức và dự án}
+
+\section{Mục tiêu}
+\begin{itemize}
+    \item Thực hiện truyền thông, mã hóa nguồn, mã hóa kênh trên vi điều khiển ESP32-S3.
+    \item Thực hiện truyền thông qua 3 module: \textbf{A (RAW)}, \textbf{B (HUFFMAN)}, \textbf{C (HUFFMAN + HAMMING(7,4))} bằng giao thức \textbf{UART}.
+    \item Trình bày được các kiến thức đã học được trên vi điều khiển và chương trình.
+\end{itemize}
+\section{Kiến thức}
+\subsection{Lý thuyết nguồn tin và Mã hóa nguồn Huffman}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Khái niệm phân bố xác suất ký hiệu, lượng tin riêng $I(p_i)$, Entropy nguồn $H(X) = -\sum P(p_i)\log_2 P(p_i)$.
+    \item Định lý mã hóa nguồn Shannon: $H(X) \le \bar{L} < H(X) + 1$.
+    \item Thuật toán Huffman.
+\end{itemize}
+
+\subsection{Kênh truyền đối xứng nhị phân BSC($p$) và Dung lượng kênh}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Mô hình kênh nhị phân đối xứng không nhớ $\text{BSC}(p)$ với xác suất lật bit độc lập $p$.
+    \item Hàm entropy nhị phân $H_2(p)$ và công thức dung lượng kênh $C = 1 - H_2(p)$ (bit/lần sử dụng kênh).
+\end{itemize}
+
+\subsection{Mã hóa kênh Hamming(7,4) hệ thống}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Cấu trúc từ mã hệ thống $c = [d_1, d_2, d_3, d_4, p_1, p_2, p_3]$, tốc độ mã $R = 4/7 \approx 0.5714$ (overhead $+75\%$).
+    \item Ma trận sinh $G = [I_4 \mid P]$, ma trận kiểm tra $H = [P^T \mid I_3]$, giải mã bằng Syndrome $S = r \cdot H^T$.
+    \item Khoảng cách tối thiểu $d_{\min} = 3$ (sửa 1 bit lỗi, phát hiện 2 bit lỗi) và xác suất vượt ngưỡng sửa lỗi $P_{\ge 2} = 1 - (1-p)^7 - 7p(1-p)^6$.
+\end{itemize}
+
+\subsection{Kiểm tra toàn vẹn dữ liệu bằng CRC}
+\begin{notebox}{Gợi ý viết mục 1.2.4 (Viết chung)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Số học trường $GF(2)$ và nguyên lý chia đa thức modulo-2.
+    \item Phân biệt vai trò: CRC-8 Sensirion (\texttt{0x31}) kiểm tra đường I$^2$C cảm biến, CRC-16 bảo vệ Header, và CRC-32 (IEEE 802.3) xác minh dữ liệu gốc tại RX.
+\end{itemize}
+\end{notebox}
+
+\section{Giới thiệu tổng quan hệ thống và các Module}
+\begin{notebox}{Gợi ý viết phần mở đầu mục 1.3}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Vẽ sơ đồ khối tổng thể 3 ESP32-S3 (\texttt{TX} $\rightarrow$ \texttt{CHANNEL} $\rightarrow$ \texttt{RX}) cùng phần cứng SHT30 và PC ghi log.
+\end{itemize}
+\end{notebox}
+
+\subsection{Giới thiệu Module 1 --- Máy phát TX}
+\begin{notebox}{Thành viên 1 tự giới thiệu ngắn gọn}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Nhiệm vụ: Đọc SHT30 qua I$^2$C, kiểm CRC-8, gom lô $N$ mẫu, thực thi Huffman/Hamming(7,4), đóng gói Frame phát UART.
+\end{itemize}
+\end{notebox}
+
+\subsection{Giới thiệu Module 2 --- Kênh truyền BSC}
+\begin{notebox}{Thành viên 2 tự giới thiệu ngắn gọn}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Nhiệm vụ: Làm cầu nối UART giữa TX và RX, tách vùng Payload, giả lập nhiễu $\text{BSC}(p)$ theo seed cố định và ghi nhận BER kênh.
+\end{itemize}
+\end{notebox}
+
+\subsection{Giới thiệu Module 3 --- Máy thu RX}
+\begin{notebox}{Thành viên 3 tự giới thiệu ngắn gọn}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Nhiệm vụ: Nhận và phân tích Frame, giải mã Hamming Syndrome, giải mã Huffman, kiểm CRC-32, quy đổi $T/RH$ và tổng hợp chỉ số đánh giá.
+\end{itemize}
+\end{notebox}
+
+\section{Luồng hoạt động trong một chu kỳ truyền (Workflow)}
+\begin{notebox}{Gợi ý viết mở đầu mục 1.4}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Chèn biểu đồ trình tự (Sequence Diagram) end-to-end qua các thành phần: SHT30 $\rightarrow$ TX $\rightarrow$ CHANNEL $\rightarrow$ RX $\rightarrow$ PC.
+\end{itemize}
+\end{notebox}
+
+\subsection{Giai đoạn phát tại Module 1 (TX)}
+\begin{notebox}{Thành viên 1 giải thích ngắn gọn luồng hoạt động}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Lấy mẫu 1\,Hz $\rightarrow$ gom đủ $N$ mẫu ($4N$ byte) $\rightarrow$ tính CRC-32 gốc $\rightarrow$ mã hóa theo Mode A/B/C $\rightarrow$ đẩy ra UART1.
+\end{itemize}
+\end{notebox}
+
+\subsection{Giai đoạn truyền qua Module 2 (CHANNEL)}
+\begin{notebox}{Thành viên 2 giải thích ngắn gọn luồng hoạt động}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Nhận Frame $\rightarrow$ giữ nguyên vùng Header tin cậy $\rightarrow$ lật bit vùng Payload theo $\text{BSC}(p)$ $\rightarrow$ thống kê bit lỗi $\rightarrow$ chuyển tiếp sang RX.
+\end{itemize}
+\end{notebox}
+
+\subsection{Giai đoạn thu và khôi phục tại Module 3 (RX)}
+\begin{notebox}{Thành viên 3 giải thích ngắn gọn luồng hoạt động}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Kiểm Header CRC-16 $\rightarrow$ giải mã Hamming (Mode C) $\rightarrow$ giải mã Huffman (Mode B/C) $\rightarrow$ đối chiếu CRC-32 $\rightarrow$ hiển thị $T(^\circ\text{C}), RH(\%)$ hoặc báo lỗi.
+\end{itemize}
+\end{notebox}
+
+\subsection{Quy ước giao tiếp chung liên bo mạch}
+\begin{notebox}{Viết chung để thống nhất cho Chương 2, 3, 4}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Tóm tắt thông số UART (\texttt{115200, 8N1}), thứ tự bit (MSB-first), quy ước 4 byte/mẫu (\texttt{T\_MSB, T\_LSB, RH\_MSB, RH\_LSB}) và cấu trúc Frame 3 vùng.
+\end{itemize}
+\end{notebox}
+
+% ==============================================================================
+% CHƯƠNG 2
+% ==============================================================================
+\chapter{Module 1 --- Máy phát TX (ESP32-S3 \#1 \& SHT30)}
+
+\section{Thiết kế phần cứng và Giao tiếp ngoại vi}
+\begin{notebox}{Nội dung mục 2.1 (Thành viên 1)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Sơ đồ nối dây SHT30 với ESP32-S3 (VCC 3V3, GND, SDA GPIO8, SCL GPIO9, địa chỉ I$^2$C \texttt{0x44}, tốc độ 100\,kHz) và UART1 (TX GPIO17, RX GPIO18).
+    \item Giải thích cấu hình Devicetree (\texttt{app.overlay}) và Kconfig (\texttt{prj.conf}) trên Zephyr RTOS.
+    \item Lý do giữ nguyên giá trị raw 16-bit (\texttt{4 byte/mẫu}) thay vì truyền số thực \texttt{float}.
+\end{itemize}
+\end{notebox}
+
+\section{Kiến trúc phần mềm và Máy trạng thái hữu hạn (FSM)}
+\begin{notebox}{Nội dung mục 2.2 (Thành viên 1)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Sơ đồ FSM điều khiển trong \texttt{main.c} và \texttt{control\_pannel}: các trạng thái \texttt{START}, \texttt{IDLE}, \texttt{COLLECT}, \texttt{ENCODER\_A}, \texttt{ENCODER\_B}, \texttt{ENCODER\_C}, \texttt{ERROR}.
+    \item Cơ chế dùng chung một lô $N=128$ mẫu ($512$ byte) để thực thi công bằng cả 3 chế độ mã hóa.
+\end{itemize}
+\end{notebox}
+
+\section{Hiện thực các khối thuật toán phía phát}
+\subsection{Driver cảm biến SHT30 (\texttt{sht30\_driver})}
+\begin{notebox}{Nội dung mục 2.3.1 (Thành viên 1)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Quy trình đo Single-Shot \texttt{0x2400}, trễ đo 20\,ms, đọc 6 byte và kiểm tra độc lập 2 mã CRC-8 (\texttt{0x31}).
+    \item Thống kê bộ đếm lỗi \texttt{i2c\_errors}, \texttt{crc\_errors} và loại bỏ mẫu lỗi trước khi đưa vào buffer.
+\end{itemize}
+\end{notebox}
+
+\subsection{Bộ mã hóa nguồn Canonical Huffman (\texttt{huffman\_encoder})}
+\begin{notebox}{Nội dung mục 2.3.2 (Thành viên 1)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Thống kê histogram 256 byte, xây cây Huffman, sinh độ dài mã Canonical và tuần tự hóa Codebook các cặp \texttt{(symbol, len)}.
+    \item Đóng gói bitstream MSB-first, ghi nhận \texttt{coded\_valid\_bits}, tính Entropy $H(X)$, độ dài trung bình $\bar{L}$, \texttt{payload\_comp\_ratio} và \texttt{net\_comp\_ratio}.
+\end{itemize}
+\end{notebox}
+
+\subsection{Bộ mã hóa kênh Hamming(7,4) (\texttt{hamming74\_encoder})}
+\begin{notebox}{Nội dung mục 2.3.3 (Thành viên 1)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Chia bitstream Huffman thành các nibble 4-bit, xử lý 0-padding ở nibble cuối.
+    \item Ánh xạ $O(1)$ qua mảng hằng \texttt{HAMMING74\_LUT[16]} và đóng gói liên tục chuỗi từ mã 7-bit vào mảng byte.
+\end{itemize}
+\end{notebox}
+
+\section{Đóng gói khung truyền và Thu thập log thực nghiệm}
+\begin{notebox}{Nội dung mục 2.4 (Thành viên 1)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Tính CRC-32 (IEEE 802.3) trên dữ liệu gốc, xuất bản ghi \texttt{[CSV\_DATA]} qua module \texttt{logger} và thu thập tự động bằng script \texttt{collect\_logs.py}.
+\end{itemize}
+\end{notebox}
+
+\section{Kiểm thử độc lập và Kết quả thực nghiệm Module 1}
+\begin{notebox}{Nội dung mục 2.5 (Thành viên 1)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Đánh giá tiêu thụ tài nguyên (SRAM/Flash) và thời gian thực thi (\texttt{encode\_us}) trên ESP32-S3.
+    \item Bảng số liệu đo thật SHT30: $H(X)$, $\bar{L}$, tỷ lệ nén payload vs tỷ lệ nén toàn phần; phân tích hiện tượng \textbf{nén âm} khi $N$ nhỏ ($N=64, 128, 256$).
+    \item Kết quả kiểm thử tự động \texttt{hamming74\_run\_self\_test()} với bộ 16 test vector chuẩn.
+\end{itemize}
+\end{notebox}
+
+% ==============================================================================
+% CHƯƠNG 3
+% ==============================================================================
+\chapter{Module 2 --- Kênh truyền giả lập BSC (ESP32-S3 \#2)}
+
+\section{Vai trò và Kết nối phần cứng liên bo mạch}
+\begin{notebox}{Nội dung mục 3.1 (Thành viên 2)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Thiết lập cầu nối UART giữa ESP32-S3 \#1 (TX) $\rightarrow$ ESP32-S3 \#2 (CHANNEL) $\rightarrow$ ESP32-S3 \#3 (RX), nối mass chung.
+    \item Quản lý bộ đệm vòng (ring buffer) và xử lý timeout tránh mất byte khi truyền tốc độ 115200\,bps.
+\end{itemize}
+\end{notebox}
+
+\section{Đặc tả chi tiết Giao thức Khung truyền (Frame Format)}
+\begin{notebox}{Nội dung mục 3.2 (Thành viên 2)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Bảng mô tả chi tiết từng trường byte của Frame:
+    \begin{itemize}[nosep]
+        \item \textbf{Vùng 1 (Header tin cậy):} \texttt{MAGIC\_BYTE} (\texttt{0xAA55}), \texttt{VERSION}, \texttt{MODE}, \texttt{SEQUENCE\_ID}, \texttt{SAMPLE\_COUNT}, \texttt{ORIGINAL\_CRC32}, \texttt{HUFFMAN\_VALID\_BITS}, \texttt{CODED\_PAYLOAD\_LEN}, \texttt{HEADER\_CRC16}.
+        \item \textbf{Vùng 2 (Codebook Metadata):} \texttt{USED\_SYMBOLS\_COUNT}, \texttt{ENTRIES\_TABLE} (chỉ có ở Mode B, C).
+        \item \textbf{Vùng 3 (Encoded Payload):} Vùng chịu tác động trực tiếp của nhiễu $\text{BSC}(p)$.
+    \end{itemize}
+    \item Giải thích ý nghĩa khoa học của mô hình kênh thí nghiệm có vùng điều khiển tin cậy.
+\end{itemize}
+\end{notebox}
+
+\section{Hiện thực bộ giả lập nhiễu $\text{BSC}(p)$}
+\begin{notebox}{Nội dung mục 3.3 (Thành viên 2)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Thuật toán \texttt{frame\_parser} xác định chính xác vị trí bắt đầu và độ dài vùng Payload cần làm nhiễu.
+    \item Thuật toán lật bit độc lập từng bit với xác suất $p \in \{0\%, 0.1\%, 0.5\%, 1\%, 2\%, 5\%\}$.
+    \item Cơ chế cố định PRNG seed (\texttt{fixed seed}) nhằm tái lập kịch bản nhiễu giống hệt nhau để so sánh công bằng giữa 3 chế độ.
+\end{itemize}
+\end{notebox}
+
+\section{Hệ thống ghi log kênh truyền và Kịch bản phát lặp}
+\begin{notebox}{Nội dung mục 3.4 (Thành viên 2)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Ghi nhận số bit chịu nhiễu (\texttt{disturbed\_bits}), số bit đã lật (\texttt{flipped\_bits}), \texttt{seed}, \texttt{sequence\_id}, lỗi framing.
+    \item Tổ chức kịch bản phát lặp nhiều mức $p$ trên cùng dataset chuẩn (Golden Dataset).
+\end{itemize}
+\end{notebox}
+
+\section{Kiểm thử độc lập Module 2}
+\begin{notebox}{Nội dung mục 3.5 (Thành viên 2)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Kiểm thử $p = 0$: chứng minh chuyển tiếp minh bạch 100\% khung tin không biến dạng.
+    \item Kiểm thử $p > 0$: bảng thống kê đối chiếu \textbf{BER kênh thực đo} với xác suất $p$ thiết lập; xác nhận Header không bị phá hủy ngoài ý muốn.
+\end{itemize}
+\end{notebox}
+
+% ==============================================================================
+% CHƯƠNG 4
+% ==============================================================================
+\chapter{Module 3 --- Máy thu RX và Đánh giá hệ thống (ESP32-S3 \#3)}
+
+\section{Kiến trúc phần mềm và Quy trình phân tích Frame phía thu}
+\begin{notebox}{Nội dung mục 4.1 (Thành viên 3)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Thuật toán tìm \texttt{MAGIC\_BYTE (0xAA55)}, kiểm tra \texttt{HEADER\_CRC16} trước khi cấp phát/đọc Payload.
+    \item Rẽ nhánh xử lý theo trường \texttt{MODE}: Mode A (trích xuất trực tiếp), Mode B (giải Huffman), Mode C (giải Hamming $\rightarrow$ giải Huffman).
+\end{itemize}
+\end{notebox}
+
+\section{Hiện thực các khối thuật toán giải mã}
+\subsection{Bộ giải mã kênh Hamming(7,4) (\texttt{hamming74\_decoder})}
+\begin{notebox}{Nội dung mục 4.2.1 (Thành viên 3)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Tách từng từ mã 7-bit, tính Syndrome $S = r \cdot H^T$ bằng phép XOR nhanh (hoặc bảng tra 128 phần tử).
+    \item Xác định và đảo bit lỗi đơn; đếm số codeword có $S \ne 0$; cắt bỏ bit padding dư trước khi chuyển sang tầng Huffman.
+\end{itemize}
+\end{notebox}
+
+\subsection{Bộ giải mã nguồn Canonical Huffman (\texttt{huffman\_decoder})}
+\begin{notebox}{Nội dung mục 4.2.2 (Thành viên 3)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Tái tạo bảng/cây Canonical Huffman từ danh sách \texttt{(symbol, len)} nhận trong Frame.
+    \item Giải mã tuần tự từng bit (bit-serial decoding) đến đủ \texttt{huffman\_valid\_bits}.
+    \item Cơ chế phòng vệ khi bitstream bị lỗi (kiểm tra vượt quá số byte mong đợi $4N$, chống lặp vô hạn/treo hệ thống).
+\end{itemize}
+\end{notebox}
+
+\section{Kiểm tra toàn vẹn dữ liệu và Quy đổi thông số môi trường}
+\begin{notebox}{Nội dung mục 4.3 (Thành viên 3)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Tính CRC-32 trên chuỗi byte khôi phục và so sánh với \texttt{ORIGINAL\_CRC32} từ TX.
+    \item Phân loại kết quả khung tin: \texttt{OK}, \texttt{CRC\_FAIL}, \texttt{DECODE\_FAIL}, \texttt{FORMAT\_FAIL}, \texttt{TIMEOUT}.
+    \item Quy đổi sang giá trị vật lý: $T(^\circ\text{C}) = -45 + 175 \cdot \frac{T_{\text{raw}}}{65535}$ và $RH(\%) = 100 \cdot \frac{RH_{\text{raw}}}{65535}$.
+\end{itemize}
+\end{notebox}
+
+\section{Kiểm thử Module 3 và Đánh giá định lượng toàn hệ thống}
+\begin{notebox}{Nội dung mục 4.4 (Thành viên 3 --- Tổng hợp số liệu 3 khối)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Nghiệm thu khi $p=0$: khôi phục đúng $100\%$ mẫu trên cả 3 chế độ A, B, C.
+    \item Bảng tổng hợp và đồ thị so sánh 3 chế độ qua các mức nhiễu $p = 0\%, 0.1\%, 0.5\%, 1\%, 2\%, 5\%$:
+    \begin{itemize}[nosep]
+        \item Đồ thị \textbf{BER kênh vs BER đầu cuối} và \textbf{Tỷ lệ thành công gói tin (Frame Success Rate)}.
+        \item Đánh giá \textbf{MSE} của $T(^\circ\text{C})$ và $RH(\%)$, \textbf{Độ trễ (Latency)} và \textbf{Thông lượng hữu ích}.
+    \end{itemize}
+    \item Phân tích sâu hai hiện tượng thực nghiệm: \textbf{Lan truyền lỗi (Error Propagation)} ở Mode B và \textbf{Sửa nhầm (Miscorrection)} khi có $\ge 2$ bit lỗi trên một codeword ở Mode C (đối chiếu đường cong $P_{\ge 2}$).
+\end{itemize}
+\end{notebox}
+
+% ==============================================================================
+% KẾT LUẬN
+% ==============================================================================
+\chapter*{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
+\addcontentsline{toc}{chapter}{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
+
+\begin{notebox}{Nội dung cần trình bày (Viết chung)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item Tổng kết các kết quả đạt được của cả 3 module TX -- CHANNEL -- RX so với tiêu chí học thuật ban đầu.
+    \item Những hạn chế còn tồn tại (độ dài khối cố định, Hamming(7,4) chỉ sửa 1 bit lỗi đơn lẻ, giả định vùng Header tin cậy).
+    \item Hướng phát triển mở rộng: mã hóa vi phân $\Delta T / \Delta RH$ trước Huffman để tăng tỷ lệ nén, nâng cấp mã kênh lên BCH/Reed-Solomon hoặc mã chập (Convolutional/Viterbi).
+\end{itemize}
+\end{notebox}
+
+% ==============================================================================
+% TÀI LIỆU THAM KHẢO & PHỤ LỤC
+% ==============================================================================
+\chapter*{TÀI LIỆU THAM KHẢO VÀ PHỤ LỤC}
+\addcontentsline{toc}{chapter}{TÀI LIỆU THAM KHẢO VÀ PHỤ LỤC}
+
+\begin{notebox}{Nội dung cần trình bày (Viết chung)}
+\begin{itemize}[leftmargin=*,nosep]
+    \item \textbf{Tài liệu tham khảo:} Slide bài giảng Lý thuyết thông tin PTIT (ThS. Phạm Văn Sự), Datasheet Sensirion SHT3x-DIS, Tài liệu Zephyr RTOS \& ESP32-S3.
+    \item \textbf{Phụ lục A:} Hướng dẫn build, flash firmware và chạy script \texttt{collect\_logs.py}.
+    \item \textbf{Phụ lục B:} Bảng 16 từ mã Hamming(7,4) hệ thống và mẫu dữ liệu CSV thực nghiệm.
+\end{itemize}
+\end{notebox}
+
+\end{document}

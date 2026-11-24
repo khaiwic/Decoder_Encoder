@@ -1,25 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-collect_logs.py
-===============================================================================
-Thu thập dữ liệu Serial từ ESP32-S3 Máy Phát (TX Encoder) đọc cảm biến SHT30
-thực tế và tự động xuất file .csv vào thư mục results.
+"""Thu thap Serial log theo tung lo (lo1, lo2, ...) va giao tiep 2 chieu voi ESP32-S3."""
 
-Cách sử dụng:
-    # 1. Tự động tìm cổng COM của ESP32-S3 và bắt đầu ghi log:
-    python firmware/encoder/sourcepy/collect_logs.py
-
-    # 2. Chỉ định cổng COM và baudrate cụ thể:
-    python firmware/encoder/sourcepy/collect_logs.py --port COM5 --baud 115200
-===============================================================================
-"""
-
-import os
-import sys
-import time
 import argparse
-from datetime import datetime
+import os
+import re
+import sys
+import threading
+import time
 
 try:
     import serial
@@ -28,195 +16,191 @@ try:
 except ImportError:
     HAS_PYSERIAL = False
 
-TAG_HEADER = "[CSV_HEADER]"
-TAG_DATA   = "[CSV_DATA]"
+VALID_STAGES = ("collect", "encoder", "transmit_uart")
+STAGE_START_RE = re.compile(r"^\[LOG_STAGE_START\]\s+batch=(\d+)\s+stage=([a-z_]+)$")
+STAGE_END_RE = re.compile(r"^\[LOG_STAGE_END\]\s+batch=(\d+)\s+stage=([a-z_]+)$")
+BATCH_DIR_RE = re.compile(r"^lo(\d+)$")
 
-DEFAULT_HEADER = (
-    "seq_id,batch_id,mode,valid_samples,dropped_samples,avg_temp_c,avg_rh_pct,"
-    "raw_bytes,raw_crc32,entropy,huff_symbols,codebook_bytes,huff_bits,"
-    "huff_bytes,payload_ratio,net_ratio,ham_bits,ham_bytes,ham_rate,encode_us,status"
-)
 
 def find_esp32_port():
-    """Tự động quét và tìm cổng COM kết nối với ESP32-S3."""
     if not HAS_PYSERIAL:
         return None
     ports = serial.tools.list_ports.comports()
     if not ports:
         return None
+    keywords = ("esp32", "cp210", "ch340", "ch341", "ftdi", "usb serial", "uart", "jtag")
     for p in ports:
         desc = (p.description or "").lower()
         hwid = (p.hwid or "").lower()
-        if any(keyword in desc or keyword in hwid for keyword in [
-            "esp32", "cp210", "ch340", "ch341", "ftdi", "usb serial", "uart", "jtag"
-        ]):
+        if any(k in desc or k in hwid for k in keywords):
             return p.device
     return ports[0].device
 
+
 def get_default_results_dir():
-    """Xác định đường dẫn thư mục results."""
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    candidate1 = os.path.abspath(os.path.join(script_dir, "..", "results"))
-    if os.path.exists(candidate1):
-        return candidate1
-    candidate2 = os.path.abspath(os.path.join(script_dir, "..", "..", "results"))
-    return candidate2
+    return os.path.abspath(os.path.join(script_dir, "..", "results"))
 
-def process_line(line, csv_file, raw_log_file, stats):
-    """Xử lý từng dòng serial nhận được từ ESP32-S3."""
-    clean_line = line.strip()
-    if not clean_line:
-        return
 
-    if raw_log_file:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-        raw_log_file.write(f"[{timestamp}] {clean_line}\n")
-        raw_log_file.flush()
+class BatchLogManager:
+    """Quan ly ghi log tach rieng tung lo vao results/lo<N>/{collect,encoder,transmit_uart}.log."""
 
-    if clean_line.startswith(TAG_HEADER):
-        header_content = clean_line[len(TAG_HEADER):].strip()
-        print(f"\n[LOGGER] Nhan duoc tieu de CSV: {header_content}")
-        if csv_file.tell() == 0:
-            csv_file.write(header_content + "\n")
-            csv_file.flush()
-        return
+    def __init__(self, results_dir, overwrite=False):
+        self.results_dir = os.path.abspath(results_dir)
+        os.makedirs(self.results_dir, exist_ok=True)
+        self.batch_offset = 0 if overwrite else self._detect_existing_offset()
+        self.active_file = None
+        self.active_path = None
+        self.active_stage = None
+        self.active_batch = None
+        self.saved_files = []
 
-    if clean_line.startswith(TAG_DATA):
-        data_content = clean_line[len(TAG_DATA):].strip()
-        csv_file.write(data_content + "\n")
-        csv_file.flush()
-        stats["records_captured"] += 1
+    def _detect_existing_offset(self):
+        max_num = 0
+        for name in os.listdir(self.results_dir):
+            full_path = os.path.join(self.results_dir, name)
+            if os.path.isdir(full_path):
+                m = BATCH_DIR_RE.match(name)
+                if m:
+                    max_num = max(max_num, int(m.group(1)))
+        return max_num
 
-        parts = [p.strip() for p in data_content.split(",")]
-        if len(parts) >= 21:
-            seq_id, batch_id, mode = parts[0], parts[1], parts[2]
-            t_c, rh_pct = parts[5], parts[6]
-            raw_b, huff_b, ham_b = parts[7], parts[13], parts[17]
-            pay_r, net_r, c_rate = parts[14], parts[15], parts[18]
-            time_us, status = parts[19], parts[20]
+    def _close_active(self):
+        if self.active_file is not None:
+            self.active_file.flush()
+            self.active_file.close()
+            closed_path = self.active_path
+            self.active_file = None
+            self.active_path = None
+            self.active_stage = None
+            self.active_batch = None
+            return closed_path
+        return None
 
-            print(f"  [CSV #{stats['records_captured']:03d}] "
-                  f"Seq:{seq_id:>3s} (Batch #{batch_id}) | Mode:{mode:<15s} | "
-                  f"T:{t_c:>5s}C RH:{rh_pct:>5s}% | "
-                  f"Raw:{raw_b:>3s}B -> Nen:{huff_b:>3s}B -> Ham:{ham_b:>3s}B | "
-                  f"PayR:{pay_r:>5s}x | NetR:{net_r:>4s}x | CodeR:{c_rate:>6s} | "
-                  f"{time_us:>5s} us | [{status}]")
-        else:
-            print(f"  [CSV #{stats['records_captured']:03d}] {data_content}")
-        return
+    def process_line(self, line, echo=True):
+        raw_no_nl = line.rstrip("\r\n")
+        stripped = raw_no_nl.strip()
 
-    print(clean_line)
+        start_match = STAGE_START_RE.match(stripped)
+        if start_match:
+            batch_num = int(start_match.group(1))
+            stage = start_match.group(2)
+            if stage in VALID_STAGES:
+                self._close_active()
+                folder_num = self.batch_offset + batch_num
+                batch_dir = os.path.join(self.results_dir, f"lo{folder_num}")
+                os.makedirs(batch_dir, exist_ok=True)
+                target_path = os.path.join(batch_dir, f"{stage}.log")
+                self.active_file = open(target_path, "w", encoding="utf-8")
+                self.active_path = target_path
+                self.active_stage = stage
+                self.active_batch = folder_num
+                if echo:
+                    print(f"[LOG] Bat dau ghi: {target_path}", flush=True)
+                return
+
+        end_match = STAGE_END_RE.match(stripped)
+        if end_match:
+            stage = end_match.group(2)
+            if stage in VALID_STAGES and self.active_file is not None:
+                saved_path = self._close_active()
+                if saved_path:
+                    self.saved_files.append(saved_path)
+                    if echo:
+                        print(f"[LOG] Da luu xong: {saved_path}", flush=True)
+                return
+
+        if self.active_file is not None:
+            self.active_file.write(raw_no_nl + "\n")
+            self.active_file.flush()
+
+        if echo and raw_no_nl:
+            print(raw_no_nl, flush=True)
+
+    def close(self):
+        saved_path = self._close_active()
+        if saved_path and saved_path not in self.saved_files:
+            self.saved_files.append(saved_path)
+
+
+def serial_reader_loop(ser, manager, stop_event):
+    while not stop_event.is_set():
+        try:
+            line_bytes = ser.readline()
+            if line_bytes:
+                line_str = line_bytes.decode("utf-8", errors="replace")
+                manager.process_line(line_str, echo=True)
+        except Exception:
+            if stop_event.is_set():
+                break
+
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Thu thap Serial log va xuat file CSV tu ESP32-S3 + SHT30 TX Encoder."
+        description="Thu thap Serial log theo lo (collect, encoder, transmit_uart) tu ESP32-S3."
     )
-    parser.add_argument("--port", type=str, default=None,
-                        help="Ten cong Serial COM (vi du COM3 hoac COM5). Tu dong quet neu de trong.")
-    parser.add_argument("--baud", type=int, default=115200,
-                        help="Toc do baudrate (mac dinh 115200).")
-    parser.add_argument("--out-dir", type=str, default=None,
-                        help="Thu muc luu ket qua CSV va logs (mac dinh: firmware/encoder/results).")
-    parser.add_argument("--max-records", type=int, default=0,
-                        help="Dung script sau khi thu thap du N ban ghi (0: chay vo han).")
-
+    parser.add_argument("--port", type=str, default=None, help="Cong Serial COM (vd COM5). Mac dinh tu dong quet.")
+    parser.add_argument("--baud", type=int, default=115200, help="Toc do baudrate (mac dinh 115200).")
+    parser.add_argument("--out-dir", type=str, default=None, help="Thu muc results (mac dinh: firmware/encoder/results).")
+    parser.add_argument("--overwrite", action="store_true", help="Ghi de tu lo1 thay vi noi tiep so lo hien co.")
     args = parser.parse_args()
 
     results_dir = args.out_dir if args.out_dir else get_default_results_dir()
-    raw_logs_dir = os.path.join(results_dir, "raw_logs")
-    os.makedirs(results_dir, exist_ok=True)
-    os.makedirs(raw_logs_dir, exist_ok=True)
-
-    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    csv_path = os.path.join(results_dir, "tx_metrics.csv")
-    csv_timestamped_path = os.path.join(results_dir, f"tx_metrics_{timestamp_str}.csv")
-    raw_log_path = os.path.join(raw_logs_dir, f"tx_serial_{timestamp_str}.log")
-
-    print("========================================================================")
-    print("    TRINH THU THAP NHAT KY SERIAL & XUAT CSV - SHT30 TX ENCODER         ")
-    print("========================================================================")
-    print(f" Thu muc luu ket qua : {results_dir}")
-    print(f" File CSV tich luy   : {csv_path}")
-    print(f" File CSV phien chay : {csv_timestamped_path}")
-    print(f" File log Serial tho : {raw_log_path}")
 
     if not HAS_PYSERIAL:
-        print("\n[ERROR] Chua cai dat thu vien 'pyserial'. Vui long chay: pip install pyserial")
-        return
+        print("[ERROR] Chua cai dat 'pyserial'. Hay chay: pip install pyserial")
+        sys.exit(1)
 
     port = args.port if args.port else find_esp32_port()
     if not port:
-        print("\n[WARNING] Khong tim thay cong Serial ESP32-S3 nao dang cam!")
-        print("Vui long cam ESP32-S3 vao may tinh hoac chi dinh cong: python collect_logs.py --port COMx")
-        return
+        print("[WARNING] Khong tim thay cong Serial ESP32-S3! Dung --port COMx de chi dinh.")
+        sys.exit(1)
 
-    stats = {"records_captured": 0}
-    file_exists = os.path.exists(csv_path) and os.path.getsize(csv_path) > 0
+    manager = BatchLogManager(results_dir, overwrite=args.overwrite)
+    stop_event = threading.Event()
+    ser = None
 
-    with open(csv_path, "a", encoding="utf-8") as f_csv, \
-         open(csv_timestamped_path, "w", encoding="utf-8") as f_csv_ts, \
-         open(raw_log_path, "w", encoding="utf-8") as f_raw:
-
-        if not file_exists:
-            f_csv.write(DEFAULT_HEADER + "\n")
-            f_csv.flush()
-        f_csv_ts.write(DEFAULT_HEADER + "\n")
-        f_csv_ts.flush()
-
-        class DualCsvWriter:
-            def __init__(self, f1, f2):
-                self.f1 = f1
-                self.f2 = f2
-            def write(self, s):
-                self.f1.write(s)
-                self.f2.write(s)
-            def flush(self):
-                self.f1.flush()
-                self.f2.flush()
-            def tell(self):
-                return self.f1.tell()
-
-        dual_csv = DualCsvWriter(f_csv, f_csv_ts)
-
-        print(f"\n[SERIAL] Dang ket noi toi cong: {port} @ {args.baud} baud...")
-        try:
-            ser = serial.Serial(port=port, baudrate=args.baud, timeout=1.0)
-            time.sleep(0.5)
-            ser.reset_input_buffer()
-            print(f"[SERIAL] Da ket noi thanh cong voi {port}! Dang lang nghe du lieu tu SHT30...\n")
-            print("Nhan Ctrl+C de dung thu thap bat cu luc nao.\n")
-            print("-" * 100)
-
-            while True:
-                line_bytes = ser.readline()
-                if line_bytes:
-                    try:
-                        line_str = line_bytes.decode("utf-8", errors="replace")
-                        process_line(line_str, dual_csv, f_raw, stats)
-                    except Exception:
-                        pass
-
-                if args.max_records > 0 and stats["records_captured"] >= args.max_records:
-                    print(f"\n[INFO] Da thu thap du {args.max_records} ban ghi. Ket thuc.")
-                    break
-
-        except serial.SerialException as e:
-            print(f"\n[ERROR] Loi ket noi Serial tren {port}: {e}")
-        except KeyboardInterrupt:
-            print("\n\n[INFO] Nguoi dung nhan Ctrl+C dung thu thap.")
-        finally:
-            if 'ser' in locals() and ser.is_open:
-                ser.close()
-                print("[SERIAL] Da dong ket noi Serial.")
-
-    print("\n========================================================================")
-    print("                         TONG KET THU THAP                              ")
     print("========================================================================")
-    print(f" So luong ban ghi hop le: {stats['records_captured']}")
-    print(f" File CSV tong hop     : {csv_path}")
-    print(f" File CSV phien hien tai: {csv_timestamped_path}")
-    print(f" File log Serial raw   : {raw_log_path}")
-    print("========================================================================\n")
+    print("        TRINH THU LOG THEO LO - ESP32-S3 TX ENCODER (2 CHIEU)           ")
+    print("========================================================================")
+    print(f" Thu muc luu log : {manager.results_dir}")
+    print(f" Lo bat dau tu   : lo{manager.batch_offset + 1}")
+    print(f" Cong Serial     : {port} @ {args.baud} baud")
+    print(" Go lenh (COLLECT, ENCODER, TRANSMIT_UART, IDLE) roi nhan Enter.")
+    print(" Nhan Ctrl+C de dung chuong trinh.")
+    print("========================================================================")
+
+    try:
+        ser = serial.Serial(port=port, baudrate=args.baud, timeout=0.5)
+        time.sleep(0.3)
+        ser.reset_input_buffer()
+
+        reader = threading.Thread(target=serial_reader_loop, args=(ser, manager, stop_event), daemon=True)
+        reader.start()
+
+        while not stop_event.is_set():
+            try:
+                cmd = input()
+            except EOFError:
+                time.sleep(0.5)
+                continue
+            if cmd is None:
+                continue
+            payload = (cmd.strip() + "\r\n").encode("utf-8")
+            ser.write(payload)
+            ser.flush()
+    except serial.SerialException as e:
+        print(f"\n[ERROR] Loi ket noi Serial tren {port}: {e}")
+    except KeyboardInterrupt:
+        print("\n[INFO] Dung thu log theo yeu cau nguoi dung.")
+    finally:
+        stop_event.set()
+        manager.close()
+        if ser is not None and ser.is_open:
+            ser.close()
+            print("[SERIAL] Da dong ket noi Serial.")
+        print(f"[TONG KET] Da luu {len(manager.saved_files)} file log trong {manager.results_dir}")
+
 
 if __name__ == "__main__":
     main()
